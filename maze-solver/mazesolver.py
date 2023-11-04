@@ -12,86 +12,73 @@
     what ever we design it to be. Example by Min or Max.
 """
 
-from queue import PriorityQueue # for using the priority queue since we move to the cell with lowest f(n)
-from pyamaze import maze, agent,textLabel # for generating our maze
 
+from queue import PriorityQueue
+from pyamaze import maze, agent
 
+# Define the heuristic function to estimate the cost from one cell to another
+def heuristic_func(cell1, cell2):
+    return abs(cell1[0] - cell2[0]) + abs(cell1[1] - cell2[1])
 
-# Important things about the library pyamaze
-#print(my_maze.rows)
-#print(my_maze.cols)
-#print(my_maze.grid) # shows list of all cells
-#print(my_maze.maze_map) # returns a dictionary of the coordinates of the squares(as tuple) and the moves from each square (dictionary)
-
-def hueristic_func(cell1, cell2):
-    """
-    This function returns the hueristic value of moving from cell1 to cell2
-    """
-    x1,y1 = cell1
-    x2,y2 = cell2
-    return abs(x1-x2) + abs(y1-y2)
-
+# Define the A* search function
 def a_star_search(my_maze):
-    """
-    This function implements the A* search algorithm
-    """
-    # we define start cell
-    start_cell = (my_maze.rows,my_maze.cols) 
+    start_cell = (my_maze.rows, my_maze.cols)
     
-    # create dictionary comprehension to store the g values of each cell
-    g_score = {cell:float('inf') for cell in my_maze.grid} 
+    # Initialize dictionaries to store g and f scores for each cell
+    g_score = {cell: float('inf') for cell in my_maze.grid}
+    g_score[start_cell] = 0
+    f_score = {cell: float('inf') for cell in my_maze.grid}
+    f_score[start_cell] = heuristic_func(start_cell, (1, 1))
     
-    # start cell has a g_score of zero since we have not made any steps
-    g_score[start_cell] = 0 
+    # Create a priority queue to store cells with lowest f scores
+    open_set = PriorityQueue()
+    open_set.put((f_score[start_cell], start_cell))
     
-    #create dictionary comprehension to store the f values of each cell
-    f_score = {cell:float('inf') for cell in my_maze.grid} 
+    # Create a dictionary to store the path
+    came_from = {}
     
-    f_score[start_cell] = hueristic_func(start_cell,(1,1)) + 0
-
-    # create a priority queue to store the cells with lowest f values
-    my_buffer = PriorityQueue()
-
-    #update the f score of the start cell
-    my_buffer.put((hueristic_func(start_cell,(1,1)),hueristic_func(start_cell,(1,1)),start_cell))
-    aPath={}
-    while not my_buffer.empty():
-        currCell=my_buffer.get()[2]
-        if currCell==(1,1):
+    while not open_set.empty():
+        _, current = open_set.get()
+        
+        # Check if we reached the goal
+        if current == (1, 1):
             break
+        
         for d in 'ESNW':
-            if my_maze.maze_map[currCell][d]==True:
-                if d=='E':
-                    childCell=(currCell[0],currCell[1]+1)
-                if d=='W':
-                    childCell=(currCell[0],currCell[1]-1)
-                if d=='N':
-                    childCell=(currCell[0]-1,currCell[1])
-                if d=='S':
-                    childCell=(currCell[0]+1,currCell[1])
+            if my_maze.maze_map[current][d]:
+                if d == 'E':
+                    child_cell = (current[0], current[1] + 1)
+                elif d == 'W':
+                    child_cell = (current[0], current[1] - 1)
+                elif d == 'N':
+                    child_cell = (current[0] - 1, current[1])
+                elif d == 'S':
+                    child_cell = (current[0] + 1, current[1])
 
-                temp_g_score=g_score[currCell]+1
-                temp_f_score=temp_g_score+hueristic_func(childCell,(1,1))
+                tentative_g_score = g_score[current] + 1
+                
+                # Update g and f scores if a better path is found
+                if tentative_g_score < g_score[child_cell]:
+                    came_from[child_cell] = current
+                    g_score[child_cell] = tentative_g_score
+                    f_score[child_cell] = tentative_g_score + heuristic_func(child_cell, (1, 1))
+                    open_set.put((f_score[child_cell], child_cell))
+    
+    # Reconstruct the path from the goal to the start
+    path = []
+    cell = (1, 1)
+    while cell != start_cell:
+        path.insert(0, cell)
+        cell = came_from[cell]
+    
+    return path
 
-                if temp_f_score < f_score[childCell]:
-                    g_score[childCell]= temp_g_score
-                    f_score[childCell]= temp_f_score
-                    my_buffer.put((temp_f_score,hueristic_func(childCell,(1,1)),childCell))
-                    aPath[childCell]=currCell
-    fwdPath={}
-    cell=(1,1)
-    while cell!=start_cell:
-        fwdPath[aPath[cell]]=cell
-        cell=aPath[cell]
-    return fwdPath
-if __name__=='__main__':
+if __name__ == '__main__':
     SIZE = 25
-    my_maze = maze(SIZE,SIZE)
+    my_maze = maze(SIZE, SIZE)
     my_maze.CreateMaze()
-    path=a_star_search(my_maze)
+    path = a_star_search(my_maze)
 
-    a=agent(my_maze,footprints=True)
-    my_maze.tracePath({a:path})
-    l=textLabel(my_maze,'A Star Path Length',len(path)+1)
-
+    a = agent(my_maze, footprints=True)
+    my_maze.tracePath({a: path})
     my_maze.run()
