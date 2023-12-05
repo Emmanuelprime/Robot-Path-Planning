@@ -74,7 +74,7 @@ def a_star_search(my_maze):
     return path
 
 if __name__ == '__main__':
-    SIZE = 25
+    SIZE = 5
     my_maze = maze(SIZE, SIZE)
     my_maze.CreateMaze()
     path = a_star_search(my_maze)
